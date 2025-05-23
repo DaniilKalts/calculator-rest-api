@@ -73,6 +73,36 @@ func postCalculations(c echo.Context) error {
 	return c.JSON(http.StatusCreated, newCalculation)
 }
 
+func patchCalculations(c echo.Context) error {
+	id := c.Param("id")
+
+	var req CalculationRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(
+			http.StatusBadRequest,
+			map[string]string{"error": "Invalid request payload"},
+		)
+	}
+
+	result, err := calculateExpression(req.Expression)
+	if err != nil {
+		return c.JSON(
+			http.StatusBadRequest,
+			map[string]string{"error": "Invalid expression"},
+		)
+	}
+
+	for i := 0; i < len(calculations); i++ {
+		if calculations[i].ID == id {
+			calculations[i].Expression = req.Expression
+			calculations[i].Result = result
+			return c.JSON(http.StatusOK, calculations[i])
+		}
+	}
+
+	return c.JSON(http.StatusNotFound, map[string]string{"error": "Not found"})
+}
+
 func main() {
 	e := echo.New()
 
@@ -81,6 +111,7 @@ func main() {
 
 	e.GET("/calculations", getCalculations)
 	e.POST("/calculations", postCalculations)
+	e.PATCH("/calculations/:id", patchCalculations)
 
 	e.Start("localhost:8080")
 }
