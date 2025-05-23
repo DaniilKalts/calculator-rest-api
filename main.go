@@ -1,21 +1,76 @@
 package main
 
 import (
+	"fmt"
+	"github.com/Knetic/govaluate"
+	"github.com/google/uuid"
+	"net/http"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"net/http"
 )
 
-type CalculationExpression struct {
-	ID         int    `json:"id"`
+/* ======== Structs ======== */
+
+type Calculation struct {
+	ID         string `json:"id"`
 	Expression string `json:"expression"`
-	Result     int    `json:"result"`
+	Result     string `json:"result"`
 }
 
-var calculations = []CalculationExpression{}
+type CalculationRequest struct {
+	Expression string `json:"expression"`
+}
+
+/* ==== Business Logic ==== */
+
+func calculateExpression(expression string) (string, error) {
+	evaluatedExpression, err := govaluate.NewEvaluableExpression(expression)
+	if err != nil {
+		return "", err
+	}
+
+	result, err := evaluatedExpression.Evaluate(nil)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%v", result), nil
+}
+
+/* ==== Handlers ===== */
+
+var calculations = []Calculation{}
 
 func getCalculations(c echo.Context) error {
 	return c.JSON(http.StatusOK, calculations)
+}
+
+func postCalculations(c echo.Context) error {
+	var req CalculationRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(
+			http.StatusBadRequest,
+			map[string]string{"error": "Invalid request payload"},
+		)
+	}
+
+	result, err := calculateExpression(req.Expression)
+	if err != nil {
+		return c.JSON(
+			http.StatusBadRequest,
+			map[string]string{"error": "Invalid expression"},
+		)
+	}
+
+	newCalculation := Calculation{
+		ID:         uuid.NewString(),
+		Expression: req.Expression,
+		Result:     result,
+	}
+	calculations = append(calculations, newCalculation)
+
+	return c.JSON(http.StatusCreated, newCalculation)
 }
 
 func main() {
@@ -25,6 +80,7 @@ func main() {
 	e.Use(middleware.Logger())
 
 	e.GET("/calculations", getCalculations)
+	e.POST("/calculations", postCalculations)
 
 	e.Start("localhost:8080")
 }
