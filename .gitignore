@@ -1,2 +1,5 @@
 # Ignore IntelliJ's project specific settings files
 .idea/
+
+# Ignore Environment Variables
+.env

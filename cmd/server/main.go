@@ -1,7 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
+
+	"github.com/joho/godotenv"
 
 	"github.com/DaniilKalts/calculator-rest-api/internal/delivery/http"
 	"github.com/DaniilKalts/calculator-rest-api/internal/delivery/http/handlers"
@@ -11,7 +15,14 @@ import (
 )
 
 func main() {
-	dsn := "host=localhost user=postgres password=yourpassword dbname=postgres port=5433 sslmode=disable"
+	godotenv.Load()
+
+	dsn := fmt.Sprintf(
+		"host=localhost user=%s password=%s dbname=%s port=5433 sslmode=disable",
+		os.Getenv("DB_USERNAME"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+	)
 
 	db, err := postgres.InitDB(dsn)
 	if err != nil {
